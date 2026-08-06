@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'product_detail_screen.dart';
 
 // models
 import '../models/product.dart';
@@ -19,11 +20,19 @@ class ProductScreen extends StatefulWidget {
 
 class _ProductScreenState extends State<ProductScreen> {
   late final Future<List<Product>> _productsFuture;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState(){
     super.initState();
     _productsFuture = ProductService().getAllProducts();
+  }
+  
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -34,17 +43,20 @@ class _ProductScreenState extends State<ProductScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: ScreenUtil().screenWidth,
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(),
-              ),
-              child: CustomText(
-                text: 'Search',
-                fontSize: 20.sp,
-                fontWeight: FontWeight.bold,
+            // enhancement 1: added a search bar to filter the products by title
+            TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.toLowerCase();
+                });
+              },
+              decoration: InputDecoration(
+                hintText: 'Search',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
               ),
             ),
             SizedBox(height: 16.h),
@@ -69,7 +81,10 @@ class _ProductScreenState extends State<ProductScreen> {
                   );
                 }
 
-                final products = snapshot.data ?? [];
+                final allProducts = snapshot.data ?? [];
+                final products = allProducts.where((product) {
+                  return product.title.toLowerCase().contains(_searchQuery);
+                }).toList();
                 if (products.isEmpty) {
                   return Center(
                     child: CustomText(
@@ -91,46 +106,59 @@ class _ProductScreenState extends State<ProductScreen> {
                   ),
                   itemBuilder: (context, index) {
                     final product = products[index];
-                    return Card(
-                      elevation: 2,
-                      clipBehavior: Clip.antiAlias,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Image.network(
-                              product.thumbnail,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              errorBuilder: (_, __, ___) =>
-                                Icon(Icons.image, size: 24.sp),
-                            ),
+                    // enhancement 2: added a product details page that opens when a specific product card is clicked
+                    return InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ProductDetailScreen(product: product),
                           ),
-                          Padding(
-                            padding: EdgeInsets.all(8.r),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CustomText(
-                                  text: product.title,
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.bold,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                SizedBox(height: 4.h),
-                                CustomText(
-                                  text: '\$${product.price.toStringAsFixed(2)}',
-                                  fontSize: 13.sp,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ],
+                        );
+                      },
+                      child: Card(
+                        elevation: 2,
+                        clipBehavior: Clip.antiAlias,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Image.network(
+                                product.thumbnail,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                errorBuilder: (_, _, _) =>
+                                  Icon(Icons.image, size: 24.sp),
+                              ),
                             ),
-                          ),
-                        ],
+                            Padding(
+                              padding: EdgeInsets.all(8.r),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CustomText(
+                                    text: product.title,
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.bold,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  SizedBox(height: 4.h),
+                                  CustomText(
+                                    text:
+                                        '\$${product.price.toStringAsFixed(2)}',
+                                    fontSize: 13.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
