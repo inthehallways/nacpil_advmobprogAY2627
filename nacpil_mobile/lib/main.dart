@@ -9,6 +9,8 @@ import 'package:provider/provider.dart';
 //screens
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/signin_screen.dart';
+import 'screens/splash_screen.dart';
 
 //providers
 import 'providers/theme_provider.dart';
@@ -46,9 +48,11 @@ class NacpilAdvMobProg extends StatelessWidget {
             darkTheme: themeModel.darkTheme,
             themeMode: themeModel.isDark ? ThemeMode.dark : ThemeMode.light,
             title: 'E-Commerce App',
-            initialRoute: '/home',
+            initialRoute: '/splash',
             routes: {
+              '/splash': (context) => const SplashScreen(),
               '/home': (context) => const HomeScreen(),
+              '/signin': (context) => const SigninScreen(),
               '/settings': (context) => const SettingsScreen(),
             },
           );

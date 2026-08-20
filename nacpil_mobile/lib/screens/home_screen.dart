@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'product_screen.dart';
 import 'cart_screen.dart';
+import 'profile_screen.dart';
+import '../services/user_service.dart';
 import '../widgets/custom_text.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -15,6 +17,29 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
+  String _profileTitle = 'Profile';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileTitle();
+  }
+
+  Future<void> _loadProfileTitle() async {
+    final userData = await UserService().getUserData();
+    final firstName = (userData['firstName'] as String? ?? '').trim();
+    final username = (userData['username'] as String? ?? '').trim();
+
+    if (!mounted) return;
+
+    setState(() {
+      _profileTitle = firstName.isNotEmpty
+          ? firstName
+          : username.isNotEmpty
+              ? username
+              : 'Profile';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
           title: (_selectedIndex == 0)
             ? Image.asset('assets/images/nubdexchange_logo.png', scale: 11.sp)
             : CustomText(
-                text: (_selectedIndex == 1) ? 'Cart' : 'Profile',
+                text: (_selectedIndex == 1) ? 'Cart' : _profileTitle,
                 fontSize: 20.sp,
                 fontWeight: FontWeight.w600,
               ),
@@ -44,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: const <Widget>[
             ProductScreen(),
             CartScreen(),
-            Center(child: Text('Profile')),
+            ProfileScreen(),
           ],
           onPageChanged: (page) {
             setState(() {

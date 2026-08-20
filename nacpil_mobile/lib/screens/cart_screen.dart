@@ -10,6 +10,7 @@ import 'product_detail_screen.dart';
 // services
 import '../services/cart_service.dart';
 import '../services/product_service.dart';
+import '../services/user_service.dart';
 
 // widgets
 import '../widgets/custom_text.dart';
@@ -25,13 +26,25 @@ class _CartScreenState extends State<CartScreen> {
   late final Future<Cart?> _cartFuture;
   final CartService _cartService = CartService();
   final ProductService _productService = ProductService();
+  final UserService _userService = UserService();
   final Map<int, int> _quantities = {};
 
   @override
   void initState() {
     super.initState();
-    // enhancement 1: renders one user's cart from the DummyJSON cart API.
-    _cartFuture = _cartService.getCartByUserId(1);
+    // enhancement 3: cart is rendered from the saved authenticated user's id
+    _cartFuture = _getSavedUserCart();
+  }
+
+  Future<Cart?> _getSavedUserCart() async {
+    final userData = await _userService.getUserData();
+    final userId = userData['id'] as int? ?? 0;
+
+    if (userId == 0) {
+      return null;
+    }
+
+    return _cartService.getCartByUserId(userId);
   }
 
   Future<void> _openProductDetail(CartProduct cartProduct) async {
