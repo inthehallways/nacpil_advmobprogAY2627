@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'product_screen.dart';
+import 'cart_screen.dart';
 import '../widgets/custom_text.dart';
 
 class HomeScreen extends StatefulWidget {
   final String username;
-  const HomeScreen({super.key, this.username=''});
+  const HomeScreen({super.key, this.username = ''});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -20,20 +21,16 @@ class _HomeScreenState extends State<HomeScreen> {
     return PopScope(
       canPop: false,
       child: Scaffold(
-          appBar: AppBar(
-            automaticallyImplyLeading: false,
-            elevation: 2,
-            title: (_selectedIndex == 0)
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          elevation: 2,
+          title: (_selectedIndex == 0)
             ? Image.asset('assets/images/nubdexchange_logo.png', scale: 11.sp)
             : CustomText(
-              text: (_selectedIndex == 1)
-                  ? 'Chat'
-                  : (_selectedIndex == 2)
-                  ? 'Profile'
-                  : 'Home',
+                text: (_selectedIndex == 1) ? 'Cart' : 'Profile',
                 fontSize: 20.sp,
                 fontWeight: FontWeight.w600,
-            ),
+              ),
           actions: [
             IconButton(
               icon: Icon(Icons.settings, size: 24.sp),
@@ -44,7 +41,11 @@ class _HomeScreenState extends State<HomeScreen> {
         body: PageView(
           physics: const NeverScrollableScrollPhysics(),
           controller: _pageController,
-          children: const <Widget>[ProductScreen()],
+          children: const <Widget>[
+            ProductScreen(),
+            CartScreen(),
+            Center(child: Text('Profile')),
+          ],
           onPageChanged: (page) {
             setState(() {
               _selectedIndex = page;
@@ -57,19 +58,62 @@ class _HomeScreenState extends State<HomeScreen> {
           onTap: _onTappedBar,
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.shop_2), label: 'Shop'),
-            BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
+            // enhancement 1: cart screen is added as a main navigation page.
+            BottomNavigationBarItem(
+              icon: Icon(Icons.shopping_cart),
+              label: 'Cart',
+            ),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
           currentIndex: _selectedIndex,
         ),
+        // enhancement 2: chat is moved from bottom navigation to a floating action button.
+        floatingActionButton: (_selectedIndex == 1)
+            ? null
+            : FloatingActionButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const _ChatScreen(),
+                    ),
+                  );
+                },
+                tooltip: 'Chat',
+                child: Icon(Icons.chat, size: 24.sp),
+              ),
       ),
     );
   }
 
   void _onTappedBar(int value) {
-  setState(() {
-    _selectedIndex = value;
-  });
-  _pageController.jumpToPage(value);
+    setState(() {
+      _selectedIndex = value;
+    });
+    _pageController.jumpToPage(value);
+  }
+}
+
+class _ChatScreen extends StatelessWidget {
+  const _ChatScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: CustomText(
+          text: 'Chat',
+          fontSize: 20.sp,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      body: Center(
+        child: CustomText(
+          text: 'Chat',
+          fontSize: 18.sp,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 }

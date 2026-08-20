@@ -16,3 +16,10 @@ I learned while doing this activity that the model, service, and screen have dif
 On the other hand, the service is responsible for getting the data from the API. The ProductService sends a request to the products endpoint so it can return a list of Product objects. The screen then displays this data using FutureBuilder. While waiting, it shows a loading indicator, and once the data is loaded, it displays the products.
 
 Lastly, the design pattern used in this activity separates the responsibilities of the app. The model handles the data structure, the service handles the API request, and the screen handles the user interface. This makes the code easier to understand because each file has its own purpose. I believe it also makes the app easier to maintain since changes in the API, data model, or UI can be handled in separate parts of the project.
+
+### Lab Activity 3:
+I learned while doing this activity that the cart model, service, and screen have different roles when rendering cart data from the API. The Cart and CartProduct models define the structure of the cart response, including the user id, product title, price, quantity, discount, total, and thumbnail. The models also use fromJson to convert the JSON response into Dart objects that can be used by the app.
+
+On the other hand, the CartService handles the API requests. In this activity, getCartByUserId is used to render only one user’s cart instead of displaying all carts. The cart screen then uses FutureBuilder to wait for the API response and display the cart items. When a cart item is clicked, the product id is used to get the full product details, then the app navigates to the same ProductDetailScreen.
+
+Lastly, the updated design pattern separates the responsibilities of the app. The model handles the data structure, the service handles the API calls, and the screen handles the user interface. This makes the app easier to understand and maintain because each file has its own purpose. The get by id process is also useful because it allows the app to retrieve specific cart or product data instead of loading everything from the API.

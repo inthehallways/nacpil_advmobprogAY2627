@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../models/product.dart';
+import '../services/cart_service.dart';
 import '../widgets/custom_text.dart';
 
-class ProductDetailScreen extends StatelessWidget {
+class ProductDetailScreen extends StatefulWidget {
   final Product product;
 
   const ProductDetailScreen({
@@ -13,7 +14,53 @@ class ProductDetailScreen extends StatelessWidget {
   });
 
   @override
+  State<ProductDetailScreen> createState() => _ProductDetailScreenState();
+}
+
+class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  final CartService _cartService = CartService();
+  bool _isAddingToCart = false;
+
+  Future<void> _addToCart() async {
+    setState(() {
+      _isAddingToCart = true;
+    });
+
+    try {
+      // enhancement 3: adds the current product to a user cart through the Cart API.
+      await _cartService.addToCart(
+        userId: 5,
+        productId: widget.product.id,
+        quantity: 1,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${widget.product.title} added to cart')),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to add to cart: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAddingToCart = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final product = widget.product;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final greenAccent = isDark ? Colors.green.shade300 : Colors.green.shade700;
@@ -180,6 +227,38 @@ class ProductDetailScreen extends StatelessWidget {
               icon: Icons.assignment_return,
               title: 'Return Policy',
               value: product.returnPolicy,
+            ),
+            SizedBox(height: 16.h),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isAddingToCart ? null : _addToCart,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: greenAccent,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: greenContainer,
+                  disabledForegroundColor: greenAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                ),
+                icon: _isAddingToCart
+                    ? SizedBox(
+                        width: 18.r,
+                        height: 18.r,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: greenAccent,
+                        ),
+                      )
+                    : Icon(Icons.add_shopping_cart, size: 20.sp),
+                label: CustomText(
+                  text: _isAddingToCart ? 'Adding...' : 'Add to Cart',
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: _isAddingToCart ? greenAccent : Colors.white,
+                ),
+              ),
             ),
           ],
         ),
