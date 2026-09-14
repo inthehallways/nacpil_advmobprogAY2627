@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "737631607251",
+    "project_id": "advmobprog-firebase-b87ab",
+    "storage_bucket": "advmobprog-firebase-b87ab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:737631607251:android:0230f13d806ca8ca99b726",
+        "android_client_info": {
+          "package_name": "com.example.nacpil_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJhIjOrf_qGbhCI_uQAGmn7WoVAEgoT64"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

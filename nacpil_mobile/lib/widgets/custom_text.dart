@@ -24,8 +24,11 @@ class CustomText extends StatelessWidget {
   final String fontFamily;
   final FontStyle fontStyle;
   final Color? color;
+
   @override
   Widget build(BuildContext context) {
+    final themeColor = Theme.of(context).colorScheme.onSurface;
+
     return Text(
       text,
       maxLines: maxLines,
@@ -37,7 +40,7 @@ class CustomText extends StatelessWidget {
         fontWeight: fontWeight,
         fontStyle: fontStyle,
         letterSpacing: letterSpacing,
-        color: color,
+        color: color ?? themeColor,
       ),
     );
   }

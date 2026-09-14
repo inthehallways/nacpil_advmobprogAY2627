@@ -1,8 +1,9 @@
-// enhancement 3: added a settings page with a dark/light mode toggle switch
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+
+// services
+import '../services/user_service.dart';
 
 // providers
 import '../providers/theme_provider.dart';
@@ -12,6 +13,13 @@ import '../widgets/custom_text.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  Future<void> _logout(BuildContext context) async {
+    final userService = UserService();
+    await userService.signOut();
+    if (!context.mounted) return;
+    Navigator.pushNamedAndRemoveUntil(context, '/signin', (route) => false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,13 +31,14 @@ class SettingsScreen extends StatelessWidget {
           text: 'Settings',
           fontSize: 20.sp,
           fontWeight: FontWeight.bold,
+          color: Colors.white,
         ),
       ),
       body: Padding(
         padding: EdgeInsets.all(16.r),
         child: Column(
           children: [
-            // this is the light/dark mode toggle switch for enhancement 3
+            // Light/Dark mode toggle switch
             SwitchListTile(
               secondary: Icon(
                 themeProvider.isDark ? Icons.dark_mode : Icons.light_mode,
@@ -45,6 +54,30 @@ class SettingsScreen extends StatelessWidget {
                 context.read<ThemeProvider>().toggleTheme();
               },
             ),
+            const Spacer(),
+            // Logout button in settings -> back to login
+            SizedBox(
+              width: double.infinity,
+              height: 52.h,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF5B4D),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                ),
+                onPressed: () => _logout(context),
+                icon: Icon(Icons.logout, size: 18.sp),
+                label: CustomText(
+                  text: 'Log Out',
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            SizedBox(height: 16.h),
           ],
         ),
       ),

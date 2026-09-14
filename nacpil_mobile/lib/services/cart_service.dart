@@ -5,31 +5,47 @@ import '../models/cart.dart';
 
 class CartService {
   Future<List<Cart>> getAllCarts() async {
-    final response = await http.get(Uri.parse('$host/carts'));
+    try {
+      final response = await http.get(Uri.parse('$host/carts'));
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> data = jsonDecode(response.body);
-      final List cartsJson = data['carts'] ?? [];
-      return cartsJson.map((json) => Cart.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to load carts');
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final List cartsJson = data['carts'] ?? [];
+        return cartsJson.map((json) => Cart.fromJson(json)).toList();
+      } else {
+        return [];
+      }
+    } catch (_) {
+      return [];
     }
   }
 
   Future<Cart?> getCartByUserId(int userId) async {
-    final response = await http.get(Uri.parse('$host/carts/user/$userId'));
+    try {
+      // 1. Try to fetch cart for the specific user ID
+      if (userId > 0) {
+        final response = await http.get(Uri.parse('$host/carts/user/$userId'));
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> data = jsonDecode(response.body);
-      final List cartsJson = data['carts'] ?? [];
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> data = jsonDecode(response.body);
+          final List cartsJson = data['carts'] ?? [];
 
-      if (cartsJson.isEmpty) {
-        return null;
+          if (cartsJson.isNotEmpty) {
+            return Cart.fromJson(cartsJson.first);
+          }
+        }
       }
 
-      return Cart.fromJson(cartsJson.first);
-    } else {
-      throw Exception('Failed to load user cart');
+      // 2. Fallback: If user has no pre-existing cart on DummyJSON (e.g. Firebase Auth user), load default cart #1
+      final fallbackResponse = await http.get(Uri.parse('$host/carts/1'));
+      if (fallbackResponse.statusCode == 200) {
+        final Map<String, dynamic> fallbackData = jsonDecode(fallbackResponse.body);
+        return Cart.fromJson(fallbackData);
+      }
+
+      return null;
+    } catch (_) {
+      return null;
     }
   }
 

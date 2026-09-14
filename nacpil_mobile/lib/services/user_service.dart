@@ -3,10 +3,21 @@ import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants.dart';
 import '../models/user.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
+import 'package:flutter/material.dart';
+
+ValueNotifier<UserService> userService = ValueNotifier(UserService());
 
 class UserService {
   Map<String, dynamic> data = {};
 
+  final fb.FirebaseAuth firebaseAuth = fb.FirebaseAuth.instance;
+
+  fb.User? get currentUser => firebaseAuth.currentUser;
+
+  Stream<fb.User?> get authStateChanges => firebaseAuth.authStateChanges();
+
+  /// Login via DummyJSON API
   Future<Map<String, dynamic>> loginUser(String username, String password) async {
     final response = await post(
       Uri.parse('$host/auth/login'),
@@ -20,6 +31,7 @@ class UserService {
 
     if (response.statusCode == 200) {
       data = jsonDecode(response.body);
+      data['loginType'] = 'dummyjson';
       await saveUserData(data);
       return data;
     } else {
@@ -27,8 +39,137 @@ class UserService {
     }
   }
 
-  /// save user data to shared preferences
-  /// save user data from API response based on user model
+  /// Sign In via Firebase Auth
+  Future<fb.UserCredential> signIn({
+    required String email,
+    required String password,
+  }) async {
+    final credential = await firebaseAuth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+
+    final fbUser = credential.user;
+    if (fbUser != null) {
+      final userData = {
+        'id': fbUser.uid.hashCode.abs(),
+        'username': fbUser.displayName?.isNotEmpty == true
+            ? fbUser.displayName
+            : email.split('@').first,
+        'email': fbUser.email ?? email,
+        'firstName': fbUser.displayName?.split(' ').first ?? '',
+        'lastName': fbUser.displayName?.contains(' ') == true
+            ? fbUser.displayName!.split(' ').sublist(1).join(' ')
+            : '',
+        'gender': 'N/A',
+        'image': fbUser.photoURL ?? '',
+        'token': await fbUser.getIdToken() ?? '',
+        'accessToken': await fbUser.getIdToken() ?? '',
+        'loginType': 'firebase',
+      };
+      await saveUserData(userData);
+    }
+    return credential;
+  }
+
+  /// Create Account via Firebase Auth
+  Future<fb.UserCredential> createAccount({
+    required String email,
+    required String password,
+    String? username,
+    String? fName,
+    String? lName,
+    String? age,
+    String? contactNo,
+  }) async {
+    final credential = await firebaseAuth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+
+    final fbUser = credential.user;
+    if (fbUser != null) {
+      final displayName = (fName != null || lName != null)
+          ? '${fName ?? ''} ${lName ?? ''}'.trim()
+          : (username ?? email.split('@').first);
+
+      if (displayName.isNotEmpty) {
+        await fbUser.updateDisplayName(displayName);
+      }
+
+      final userData = {
+        'id': fbUser.uid.hashCode.abs(),
+        'username': username ?? email.split('@').first,
+        'email': email,
+        'firstName': fName ?? '',
+        'lastName': lName ?? '',
+        'age': age ?? '',
+        'contactNo': contactNo ?? '',
+        'gender': 'N/A',
+        'image': fbUser.photoURL ?? '',
+        'token': await fbUser.getIdToken() ?? '',
+        'accessToken': await fbUser.getIdToken() ?? '',
+        'loginType': 'firebase',
+      };
+      await saveUserData(userData);
+    }
+
+    return credential;
+  }
+
+  /// Sign out from Firebase Auth
+  Future<void> signOut() async {
+    await firebaseAuth.signOut();
+    await logout();
+  }
+
+  /// Update Username
+  Future<void> updateUsername({required String username}) async {
+    if (currentUser != null) {
+      await currentUser!.updateDisplayName(username);
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('username', username);
+  }
+
+  /// Delete Account
+  Future<void> deleteAccount({
+    required String email,
+    required String password,
+  }) async {
+    if (currentUser != null) {
+      fb.AuthCredential credential = fb.EmailAuthProvider.credential(
+        email: email,
+        password: password,
+      );
+
+      await currentUser!.reauthenticateWithCredential(credential);
+      await currentUser!.delete();
+      await firebaseAuth.signOut();
+    }
+    await logout();
+  }
+
+  /// Reset Password from Current Password
+  Future<void> resetPasswordFromCurrentPassword({
+    required String currentPassword,
+    required String newPassword,
+    required String email,
+  }) async {
+    if (currentUser != null) {
+      fb.AuthCredential credential = fb.EmailAuthProvider.credential(
+        email: email,
+        password: currentPassword,
+      );
+
+      await currentUser!.reauthenticateWithCredential(credential);
+      await currentUser!.updatePassword(newPassword);
+    } else {
+      throw Exception('No active Firebase user found to update password.');
+    }
+  }
+
+  /// Save user data to shared preferences
   Future<void> saveUserData(Map<String, dynamic> data) async {
     final prefs = await SharedPreferences.getInstance();
     final user = User.fromJson(data);
@@ -38,12 +179,14 @@ class UserService {
     await prefs.setString('email', user.email);
     await prefs.setString('firstName', user.firstName);
     await prefs.setString('lastName', user.lastName);
+    await prefs.setString('age', user.age);
+    await prefs.setString('contactNo', user.contactNo);
     await prefs.setString('gender', user.gender);
     await prefs.setString('image', user.image);
     await prefs.setString('accessToken', user.accessToken);
     await prefs.setString('refreshToken', user.refreshToken);
+    await prefs.setString('loginType', user.loginType);
 
-    // support generic token key if present in API response
     if (data.containsKey('token')) {
       await prefs.setString('token', data['token'] ?? '');
     } else if (user.accessToken.isNotEmpty) {
@@ -51,7 +194,7 @@ class UserService {
     }
   }
 
-  /// retrive user data from shared preferences
+  /// Retrieve user data from shared preferences
   Future<Map<String, dynamic>> getUserData() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -61,30 +204,36 @@ class UserService {
       'email': prefs.getString('email') ?? '',
       'firstName': prefs.getString('firstName') ?? '',
       'lastName': prefs.getString('lastName') ?? '',
+      'age': prefs.getString('age') ?? '',
+      'contactNo': prefs.getString('contactNo') ?? '',
       'gender': prefs.getString('gender') ?? '',
       'image': prefs.getString('image') ?? '',
       'accessToken': prefs.getString('accessToken') ?? '',
       'refreshToken': prefs.getString('refreshToken') ?? '',
-      'token': prefs.getString('token') ?? ''
+      'token': prefs.getString('token') ?? '',
+      'loginType': prefs.getString('loginType') ?? 'dummyjson',
     };
   }
 
-  /// retrive user model from shared preferences
+  /// Retrieve user model from shared preferences
   Future<User> getUser() async {
     final userData = await getUserData();
     return User.fromJson(userData);
   }
 
-  /// check if user is logged in
+  /// Check if user is logged in
   Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken') ?? prefs.getString('token');
-    return token != null && token.isNotEmpty;
+    return (token != null && token.isNotEmpty) || firebaseAuth.currentUser != null;
   }
 
-  /// logout and clear user data
+  /// Logout and clear user data
   Future<void> logout() async {
-    try{
+    try {
+      if (firebaseAuth.currentUser != null) {
+        await firebaseAuth.signOut();
+      }
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
     } catch (e) {

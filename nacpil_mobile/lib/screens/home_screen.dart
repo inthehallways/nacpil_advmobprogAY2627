@@ -55,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 text: (_selectedIndex == 1) ? 'Cart' : _profileTitle,
                 fontSize: 20.sp,
                 fontWeight: FontWeight.w600,
+                color: Colors.white,
               ),
           actions: [
             IconButton(
@@ -130,6 +131,7 @@ class _ChatScreen extends StatelessWidget {
           text: 'Chat',
           fontSize: 20.sp,
           fontWeight: FontWeight.w600,
+          color: Colors.white,
         ),
       ),
       body: Center(

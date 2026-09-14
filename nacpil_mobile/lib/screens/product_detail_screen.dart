@@ -81,6 +81,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           fontWeight: FontWeight.bold,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
+          color: Colors.white,
         ),
       ),
       body: SingleChildScrollView(

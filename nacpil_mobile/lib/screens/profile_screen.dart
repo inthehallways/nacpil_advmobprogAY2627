@@ -29,7 +29,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // enhancement 3: profile renders the saved User model and loads cart by user id.
   Future<_ProfileData> _loadProfileData() async {
     final user = await _userService.getUser();
-    final cart = user.id == 0 ? null : await _cartService.getCartByUserId(user.id);
+    Cart? cart;
+    try {
+      cart = user.id == 0 ? null : await _cartService.getCartByUserId(user.id);
+    } catch (_) {
+      cart = null;
+    }
 
     return _ProfileData(user: user, cart: cart);
   }
@@ -253,7 +258,7 @@ class _InfoRow extends StatelessWidget {
             child: CustomText(
               text: value.isEmpty ? 'Not available' : value,
               fontSize: 11.sp,
-              color: Colors.black54,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.right,
@@ -318,7 +323,7 @@ class _CartSummary extends StatelessWidget {
                       ? 'No cart found for this user'
                       : '${currentCart.totalProducts} products | ${currentCart.totalQuantity} items',
                   fontSize: 11.sp,
-                  color: Colors.black54,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ],
             ),
