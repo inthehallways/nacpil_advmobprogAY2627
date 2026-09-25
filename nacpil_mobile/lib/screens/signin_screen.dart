@@ -19,7 +19,7 @@ class _SigninScreenState extends State<SigninScreen> {
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _isFirebaseAuth = true; // Toggle between Firebase Auth & DummyJSON
+  bool _isFirebaseAuth = true; // toggle between firebase auth & dummyjson
 
   @override
   void dispose() {
@@ -37,7 +37,7 @@ class _SigninScreenState extends State<SigninScreen> {
 
     try {
       if (_isFirebaseAuth) {
-        // Firebase Auth login using Email & Password
+        // firebase auth login using email & password
         await _userService.signIn(
           email: _identifierController.text.trim(),
           password: _passwordController.text,
@@ -46,7 +46,7 @@ class _SigninScreenState extends State<SigninScreen> {
         if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/home');
       } else {
-        // DummyJSON API login using Username & Password
+        // dummyjson api login using username & password
         final response = await _userService.loginUser(
           _identifierController.text.trim(),
           _passwordController.text,
@@ -111,7 +111,7 @@ class _SigninScreenState extends State<SigninScreen> {
                       ),
                     ),
                     SizedBox(height: 18.h),
-                    // Login Mode Toggle Selector (Firebase Auth vs DummyJSON)
+                    // login mode toggle selector (firebase auth vs dummyjson)
                     Container(
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest,

@@ -17,7 +17,7 @@ class UserService {
 
   Stream<fb.User?> get authStateChanges => firebaseAuth.authStateChanges();
 
-  /// Login via DummyJSON API
+  /// login via dummyjson api
   Future<Map<String, dynamic>> loginUser(String username, String password) async {
     final response = await post(
       Uri.parse('$host/auth/login'),
@@ -39,7 +39,7 @@ class UserService {
     }
   }
 
-  /// Sign In via Firebase Auth
+  /// sign in via firebase auth
   Future<fb.UserCredential> signIn({
     required String email,
     required String password,
@@ -72,7 +72,7 @@ class UserService {
     return credential;
   }
 
-  /// Create Account via Firebase Auth
+  /// create account via firebase auth
   Future<fb.UserCredential> createAccount({
     required String email,
     required String password,
@@ -117,13 +117,13 @@ class UserService {
     return credential;
   }
 
-  /// Sign out from Firebase Auth
+  /// sign out from firebase auth
   Future<void> signOut() async {
     await firebaseAuth.signOut();
     await logout();
   }
 
-  /// Update Username
+  /// update username
   Future<void> updateUsername({required String username}) async {
     if (currentUser != null) {
       await currentUser!.updateDisplayName(username);
@@ -132,7 +132,7 @@ class UserService {
     await prefs.setString('username', username);
   }
 
-  /// Delete Account
+  /// delete account
   Future<void> deleteAccount({
     required String email,
     required String password,
@@ -150,7 +150,7 @@ class UserService {
     await logout();
   }
 
-  /// Reset Password from Current Password
+  /// reset password from current password
   Future<void> resetPasswordFromCurrentPassword({
     required String currentPassword,
     required String newPassword,
@@ -169,7 +169,7 @@ class UserService {
     }
   }
 
-  /// Save user data to shared preferences
+  /// save user data to shared preferences
   Future<void> saveUserData(Map<String, dynamic> data) async {
     final prefs = await SharedPreferences.getInstance();
     final user = User.fromJson(data);
@@ -194,7 +194,7 @@ class UserService {
     }
   }
 
-  /// Retrieve user data from shared preferences
+  /// retrieve user data from shared preferences
   Future<Map<String, dynamic>> getUserData() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -215,20 +215,20 @@ class UserService {
     };
   }
 
-  /// Retrieve user model from shared preferences
+  /// retrieve user model from shared preferences
   Future<User> getUser() async {
     final userData = await getUserData();
     return User.fromJson(userData);
   }
 
-  /// Check if user is logged in
+  /// check if user is logged in
   Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken') ?? prefs.getString('token');
     return (token != null && token.isNotEmpty) || firebaseAuth.currentUser != null;
   }
 
-  /// Logout and clear user data
+  /// logout and clear user data
   Future<void> logout() async {
     try {
       if (firebaseAuth.currentUser != null) {
