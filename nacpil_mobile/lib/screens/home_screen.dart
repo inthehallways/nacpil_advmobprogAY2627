@@ -5,6 +5,7 @@ import 'cart_screen.dart';
 import 'profile_screen.dart';
 import '../services/user_service.dart';
 import '../widgets/custom_text.dart';
+import 'chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String username;
@@ -101,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const _ChatScreen(),
+                      builder: (context) => const ChatScreen(),
                     ),
                   );
                 },
@@ -117,30 +118,5 @@ class _HomeScreenState extends State<HomeScreen> {
       _selectedIndex = value;
     });
     _pageController.jumpToPage(value);
-  }
-}
-
-class _ChatScreen extends StatelessWidget {
-  const _ChatScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: CustomText(
-          text: 'Chat',
-          fontSize: 20.sp,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-        ),
-      ),
-      body: Center(
-        child: CustomText(
-          text: 'Chat',
-          fontSize: 18.sp,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
   }
 }
