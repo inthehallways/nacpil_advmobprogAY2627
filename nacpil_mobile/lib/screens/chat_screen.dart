@@ -17,19 +17,23 @@ class _ChatScreenState extends State<ChatScreen> {
     final TextEditingController _searchChatController = TextEditingController();
     final ChatService _chatService = ChatService();
     String? _currentUserEmail;
+    String? _currentUserId;
     String _searchText = '';
 
     @override
     void initState() {
         super.initState();
-        _loadCurrentUserEmail();
+        _loadCurrentUser();
     }
 
-    Future<void> _loadCurrentUserEmail() async {
+    Future<void> _loadCurrentUser() async {
         final userData = await userService.value.getUserData();
-        setState(() {
-            _currentUserEmail = userData['email'];
-        });
+        if (mounted) {
+            setState(() {
+                _currentUserEmail = userData['email']?.toString() ?? userService.value.currentUser?.email;
+                _currentUserId = userData['uid']?.toString() ?? userService.value.currentUser?.uid;
+            });
+        }
     }
 
     @override
@@ -54,9 +58,15 @@ class _ChatScreenState extends State<ChatScreen> {
                             child: TextField(
                                 controller: _searchChatController,
                                 textInputAction: TextInputAction.search,
+                                // lab act 6 enhancement 2: update search filter on input change
+                                onChanged: (value) {
+                                    setState(() {
+                                        _searchText = value.trim().toLowerCase();
+                                    });
+                                },
                                 decoration: InputDecoration(
                                     hintText: 'Search chat...',
-                                    prefixIcon: Icon(Icons.search),
+                                    prefixIcon: const Icon(Icons.search),
                                     suffixIcon: (_searchChatController.text.isNotEmpty)
                                         ? IconButton(
                                             tooltip: 'Clear',
@@ -80,7 +90,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         // users stream
                         StreamBuilder<List<Map<String, dynamic>>>(
                             stream: _chatService.getUsersStream(),
-                            builder: (context,snapshot) {
+                            builder: (context, snapshot) {
                                 if (snapshot.connectionState == ConnectionState.waiting) {
                                     return Container(
                                         height: ScreenUtil().screenHeight * 0.6,
@@ -115,7 +125,19 @@ class _ChatScreenState extends State<ChatScreen> {
                                     );
                                 }
 
-                                final users = snapshot.data!;
+                                // lab act 6 enhancement 1: display all registered users while excluding the current logged-in user
+                                final currentEmail = (_currentUserEmail ?? userService.value.currentUser?.email ?? '').trim().toLowerCase();
+                                final currentUid = (_currentUserId ?? userService.value.currentUser?.uid ?? '').trim();
+
+                                final users = snapshot.data!.where((user) {
+                                    final userEmail = (user['email'] ?? '').toString().trim().toLowerCase();
+                                    final userUid = (user['uid'] ?? '').toString().trim();
+
+                                    final isCurrentUser = (currentEmail.isNotEmpty && userEmail == currentEmail) ||
+                                        (currentUid.isNotEmpty && userUid == currentUid);
+
+                                    return !isCurrentUser;
+                                }).toList();
 
                                 if (users.isEmpty) {
                                     return Container(
@@ -123,7 +145,37 @@ class _ChatScreenState extends State<ChatScreen> {
                                         padding: EdgeInsets.all(16.sp),
                                         child: Center(
                                             child: CustomText(
-                                                text: 'No messages found...',
+                                                text: 'No other users found',
+                                                fontSize: 16.sp,
+                                            ),
+                                        ),
+                                    );
+                                }
+
+                                // lab act 6 enhancement 2: filter users by typing their name or email
+                                final filteredUsers = users.where((user) {
+                                    if (_searchText.isEmpty) return true;
+
+                                    final firstName = (user['firstName'] ?? '').toString().toLowerCase();
+                                    final lastName = (user['lastName'] ?? '').toString().toLowerCase();
+                                    final fullName = '$firstName $lastName'.trim();
+                                    final username = (user['username'] ?? '').toString().toLowerCase();
+                                    final email = (user['email'] ?? '').toString().toLowerCase();
+
+                                    return firstName.contains(_searchText) ||
+                                        lastName.contains(_searchText) ||
+                                        fullName.contains(_searchText) ||
+                                        username.contains(_searchText) ||
+                                        email.contains(_searchText);
+                                }).toList();
+
+                                if (filteredUsers.isEmpty) {
+                                    return Container(
+                                        height: ScreenUtil().screenHeight * 0.6,
+                                        padding: EdgeInsets.all(16.sp),
+                                        child: Center(
+                                            child: CustomText(
+                                                text: 'No users found matching "$_searchText"',
                                                 fontSize: 16.sp,
                                             ),
                                         ),
@@ -134,45 +186,55 @@ class _ChatScreenState extends State<ChatScreen> {
                                     shrinkWrap: true,
                                     padding: EdgeInsets.symmetric(horizontal: 16.w),
                                     physics: const NeverScrollableScrollPhysics(),
-                                    itemCount: users.length,
+                                    itemCount: filteredUsers.length,
                                     itemBuilder: (context, index) {
-                                        final user = users[index];
+                                        final user = filteredUsers[index];
                                         return GestureDetector(
                                             onTap: () {
                                                 Navigator.push(
                                                     context,
                                                     MaterialPageRoute(
                                                         builder: (context) => ChatDetailScreen(
-                                                            currentUserEmail: _currentUserEmail!,
+                                                            currentUserEmail: _currentUserEmail ?? userService.value.currentUser?.email ?? '',
                                                             tappedUser: user,
                                                         ),
                                                     ),
                                                 );
                                             },
-                                            child: Card(
-                                                child: ListTile(
-                                                    leading: CircleAvatar(
-                                                        child: CustomText(
-                                                            text:
-                                                                user['firstName'] != null &&
-                                                                    user['firstName'].toString().isNotEmpty
-                                                                ? user['firstName'][0].toUpperCase()
-                                                                : '?',
-                                                            fontSize: 16,
-                                                            fontWeight: FontWeight.bold,
+                                            child: Builder(
+                                                builder: (context) {
+                                                    final fName = (user['firstName'] ?? '').toString().trim();
+                                                    final lName = (user['lastName'] ?? '').toString().trim();
+                                                    final fullName = '$fName $lName'.trim();
+                                                    final displayName = fullName.isNotEmpty
+                                                        ? fullName
+                                                        : ((user['username'] ?? user['email'] ?? 'Unknown').toString());
+                                                    final initial = fName.isNotEmpty
+                                                        ? fName[0].toUpperCase()
+                                                        : (displayName.isNotEmpty ? displayName[0].toUpperCase() : '?');
+
+                                                    return Card(
+                                                        child: ListTile(
+                                                            leading: CircleAvatar(
+                                                                child: CustomText(
+                                                                    text: initial,
+                                                                    fontSize: 16,
+                                                                    fontWeight: FontWeight.bold,
+                                                                ),
+                                                            ),
+                                                            title: CustomText(
+                                                                text: displayName,
+                                                                fontSize: 18.sp,
+                                                                fontWeight: FontWeight.bold,    
+                                                            ),
+                                                            subtitle: CustomText(
+                                                                text: user['email'] ?? 'No email',
+                                                                fontSize: 12.sp,
+                                                                fontWeight: FontWeight.w300,
+                                                            ),
                                                         ),
-                                                    ),
-                                                    title: CustomText(
-                                                        text: user['firstName'] ?? 'Unknown',
-                                                        fontSize: 20,
-                                                        fontWeight: FontWeight.bold,    
-                                                    ),
-                                                    subtitle: CustomText(
-                                                        text: user['email'] ?? 'No email',
-                                                        fontSize: 12,
-                                                        fontWeight: FontWeight.w300,
-                                                    ),
-                                                ),
+                                                    );
+                                                },
                                             ),
                                         );
                                     },

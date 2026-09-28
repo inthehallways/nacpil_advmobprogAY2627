@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants.dart';
@@ -12,6 +13,8 @@ class UserService {
   Map<String, dynamic> data = {};
 
   final fb.FirebaseAuth firebaseAuth = fb.FirebaseAuth.instance;
+  // lab act 6: firestore instance for user data management
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   fb.User? get currentUser => firebaseAuth.currentUser;
 
@@ -51,23 +54,57 @@ class UserService {
 
     final fbUser = credential.user;
     if (fbUser != null) {
+      // lab act 6: fetch existing user document from cloud_firestore Users collection
+      Map<String, dynamic> firestoreData = {};
+      try {
+        final userDoc = await _firestore.collection('Users').doc(fbUser.uid).get();
+        if (userDoc.exists && userDoc.data() != null) {
+          firestoreData = userDoc.data()!;
+        }
+      } catch (_) {}
+
+      final String resolvedUsername = firestoreData['username'] ??
+          (fbUser.displayName?.isNotEmpty == true
+              ? fbUser.displayName!
+              : email.split('@').first);
+
+      final String resolvedFirstName = firestoreData['firstName'] ??
+          (fbUser.displayName?.split(' ').first ?? '');
+
+      final String resolvedLastName = firestoreData['lastName'] ??
+          (fbUser.displayName?.contains(' ') == true
+              ? fbUser.displayName!.split(' ').sublist(1).join(' ')
+              : '');
+
       final userData = {
         'id': fbUser.uid.hashCode.abs(),
-        'username': fbUser.displayName?.isNotEmpty == true
-            ? fbUser.displayName
-            : email.split('@').first,
+        'uid': fbUser.uid,
+        'username': resolvedUsername,
         'email': fbUser.email ?? email,
-        'firstName': fbUser.displayName?.split(' ').first ?? '',
-        'lastName': fbUser.displayName?.contains(' ') == true
-            ? fbUser.displayName!.split(' ').sublist(1).join(' ')
-            : '',
-        'gender': 'N/A',
+        'firstName': resolvedFirstName,
+        'lastName': resolvedLastName,
+        'age': firestoreData['age'] ?? '',
+        'contactNo': firestoreData['contactNo'] ?? '',
+        'gender': firestoreData['gender'] ?? 'N/A',
         'image': fbUser.photoURL ?? '',
         'token': await fbUser.getIdToken() ?? '',
         'accessToken': await fbUser.getIdToken() ?? '',
         'loginType': 'firebase',
       };
       await saveUserData(userData);
+
+      // lab act 6: ensure user document is populated in Users collection
+      try {
+        await _firestore.collection('Users').doc(fbUser.uid).set({
+          'uid': fbUser.uid,
+          'username': resolvedUsername,
+          'email': fbUser.email ?? email,
+          'firstName': resolvedFirstName,
+          'lastName': resolvedLastName,
+          'age': firestoreData['age'] ?? '',
+          'contactNo': firestoreData['contactNo'] ?? '',
+        }, SetOptions(merge: true));
+      } catch (_) {}
     }
     return credential;
   }
@@ -97,12 +134,17 @@ class UserService {
         await fbUser.updateDisplayName(displayName);
       }
 
+      final resolvedUsername = username ?? email.split('@').first;
+      final resolvedFirstName = fName ?? '';
+      final resolvedLastName = lName ?? '';
+
       final userData = {
         'id': fbUser.uid.hashCode.abs(),
-        'username': username ?? email.split('@').first,
+        'uid': fbUser.uid,
+        'username': resolvedUsername,
         'email': email,
-        'firstName': fName ?? '',
-        'lastName': lName ?? '',
+        'firstName': resolvedFirstName,
+        'lastName': resolvedLastName,
         'age': age ?? '',
         'contactNo': contactNo ?? '',
         'gender': 'N/A',
@@ -112,6 +154,19 @@ class UserService {
         'loginType': 'firebase',
       };
       await saveUserData(userData);
+
+      // lab act 6: store newly created user in cloud_firestore Users collection
+      try {
+        await _firestore.collection('Users').doc(fbUser.uid).set({
+          'uid': fbUser.uid,
+          'username': resolvedUsername,
+          'email': email,
+          'firstName': resolvedFirstName,
+          'lastName': resolvedLastName,
+          'age': age ?? '',
+          'contactNo': contactNo ?? '',
+        }, SetOptions(merge: true));
+      } catch (_) {}
     }
 
     return credential;
@@ -127,6 +182,12 @@ class UserService {
   Future<void> updateUsername({required String username}) async {
     if (currentUser != null) {
       await currentUser!.updateDisplayName(username);
+      // lab act 6: update username in cloud_firestore Users collection
+      try {
+        await _firestore.collection('Users').doc(currentUser!.uid).set({
+          'username': username,
+        }, SetOptions(merge: true));
+      } catch (_) {}
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('username', username);
@@ -187,6 +248,10 @@ class UserService {
     await prefs.setString('refreshToken', user.refreshToken);
     await prefs.setString('loginType', user.loginType);
 
+    // lab act 6: persist firebase uid for chat identification
+    final resolvedUid = data['uid']?.toString() ?? firebaseAuth.currentUser?.uid ?? '';
+    await prefs.setString('uid', resolvedUid);
+
     if (data.containsKey('token')) {
       await prefs.setString('token', data['token'] ?? '');
     } else if (user.accessToken.isNotEmpty) {
@@ -200,8 +265,9 @@ class UserService {
 
     return {
       'id': prefs.getInt('id') ?? 0,
+      'uid': prefs.getString('uid') ?? (firebaseAuth.currentUser?.uid ?? ''),
       'username': prefs.getString('username') ?? '',
-      'email': prefs.getString('email') ?? '',
+      'email': prefs.getString('email') ?? (firebaseAuth.currentUser?.email ?? ''),
       'firstName': prefs.getString('firstName') ?? '',
       'lastName': prefs.getString('lastName') ?? '',
       'age': prefs.getString('age') ?? '',

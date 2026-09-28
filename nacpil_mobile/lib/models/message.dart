@@ -6,6 +6,8 @@ class MessageModel {
   final String receiverId;
   final String message;
   final Timestamp timestamp;
+  // lab act 6 enhancement 3: message delivery status (e.g. sending, sent, delivered, seen)
+  final String status;
 
   MessageModel({
     required this.senderId,
@@ -13,15 +15,17 @@ class MessageModel {
     required this.receiverId,
     required this.message,
     required this.timestamp,
+    this.status = 'sent',
   });
 
   factory MessageModel.fromMap(Map<String, dynamic> map) {
     return MessageModel(
-      senderId: map['senderId'],
-      senderEmail: map['senderEmail'],
-      receiverId: map['receiverId'],
-      message: map['message'],
-      timestamp: map['timestamp'],
+      senderId: map['senderId'] ?? '',
+      senderEmail: map['senderEmail'] ?? '',
+      receiverId: map['receiverId'] ?? '',
+      message: map['message'] ?? '',
+      timestamp: map['timestamp'] is Timestamp ? map['timestamp'] : Timestamp.now(),
+      status: map['status'] ?? 'sent',
     );
   }
 
@@ -32,6 +36,7 @@ class MessageModel {
       'receiverId': receiverId,
       'message': message,
       'timestamp': timestamp,
+      'status': status,
     };
   }
 }
